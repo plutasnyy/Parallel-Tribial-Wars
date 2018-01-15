@@ -3,10 +3,11 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <unistd.h>
+#include <stdlib.h>  // for strtol
 #include <string.h>
 
 #define MSGPERM 0640    // msg queue permission
-const int id;
+int id;
 /*
  * to run:
  * ./client id rw
@@ -22,11 +23,11 @@ struct Message {
 void sendMsg(char text[]){
     printf("%s\n",text);
 }
-void read(){
+void main_read(){
     printf("Information from server:\n");
 }
 
-void write(){
+void main_write(){
     char text[1024];
     while(1){
         scanf("%s",text);
@@ -35,12 +36,11 @@ void write(){
     }
 }
 int main(int argc, char *argv[]) {
-
-    id = argv[1];
-    printf("your id:\n",id);
-    const int rw = argv[2];
-    if(rw==0)read();
-    else if(rw==1)write();
+    id = strtol(argv[1], NULL, 10);
+    printf("your id: %d\n",id);
+    const int rw=strtol(argv[2], NULL, 10);
+    if(rw==0)main_read();
+    else if(rw==1)main_write();
     else printf("BAD ARGUMENT");
     return 0;
 }
