@@ -6,7 +6,9 @@
 #include <stdlib.h>  // for strtol
 #include <string.h>
 #include <stdbool.h>
+#include <errno.h>
 #define MSGPERM 0640    // msg queue permission
+#define queue 812357
 long id;
 /*
  * to run:
@@ -18,11 +20,30 @@ struct Message {
     long type;
     int id;
     char text[1024];
-} msg;
+};
 
-void sendMsg(char text[]){
+void read_msg(){
+    struct Message msg;
+    int msqid = msgget(queue, MSGPERM|IPC_CREAT);
+    int result = msgrcv(msqid, &msg, sizeof(msg), 2, 0);
+
+    if (result==-1){
+        printf("%s,Oh dear, something went wrong with read()! %s\n",errno, strerror(errno));
+    }
+    else{
+        if(msg.id == id){
+            printf("%s\n",msg.text);
+        }
+    }
+}
+void send_msg(char text[]){
+    struct Message msg;
+    msg.type=1;
+    msg.id = (int)id;
     strcpy(msg.text,text);
-    printf("%s\n",msg.text);
+    int msqid = msgget(queue, MSGPERM|IPC_CREAT);
+    int result = msgsnd(msqid, &msg, sizeof(msg), 0);
+    printf("%s,msqid:%d, result:%d\n",msg.text,msqid,result);
 
 }
 bool is_correct_message(char text[]){
@@ -34,7 +55,9 @@ bool is_correct_message(char text[]){
 
 
 void main_read(){
-    printf("Information from server:\n");
+    while(1){
+        read_msg();
+    }
 }
 
 
@@ -43,7 +66,7 @@ void main_write(){
     char text[1024];
     while(1){
         scanf("%s",text);
-        if(is_correct_message(text)) sendMsg(text);
+        if(is_correct_message(text)) send_msg(text);
         else printf("Incorrect message\n");
         break;
     }
@@ -60,5 +83,7 @@ int main(int argc, char *argv[]) {
     if(rw==0)main_read();
     else if(rw==1)main_write();
     else printf("BAD ARGUMENT");
+    int msqid = msgget(queue, MSGPERM|IPC_CREAT);
+    msgctl(msqid,IPC_RMID,0);
     return 0;
 }
