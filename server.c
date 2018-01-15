@@ -2,24 +2,47 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
-
 #include <errno.h>
-#define MSGPERM 0640    // msg queue permission
 
-struct message {
+#define MSGPERM 0640    // msg queue permission
+/*
+ * State:
+ * 0-unconnected
+ * 1-connected
+ *
+ */
+struct Army{
+    int lightInf;
+    int heavyInf;
+    int ride;
+    int workers;
+};
+struct Player{
+    int id;
+    int state;
+    int resources;
+    Army army;
+};
+
+struct Message {
     long type;
-    int a;
+    char text[1024];
 } msg;
 
-
+void initial_values(Player players[]){
+    for(int i=0;i<3;i++){
+        players[i].id=i;
+        players[i].state=0;
+        players[i].resources=300;
+        players[i].army.heavyInf=0;
+        players[i].army.lightInf=0;
+        players[i].army.ride=0;
+        players[i].army.workers=0;
+    }
+}
 int main(int argc, char *argv[])
 {
-    int msqid = msgget(812355, MSGPERM|IPC_CREAT|IPC_EXCL);
-    int result = msgrcv(msqid, &msg, sizeof(msg.a), 1, 0);
-
-    if (result==-1){
-        printf("%s,Oh dear, something went wrong with read()! %s\n",errno, strerror(errno));
-    }
-    printf("Wiadomosc: %s \n",msg.text);
+    Player players[3];
+    void initial_values(players);
     return 0;
 }
