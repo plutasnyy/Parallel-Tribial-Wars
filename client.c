@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #define MSGPERM 0640    // msg queue permission
-#define queue 812357
+#define queue 812359
 long id;
 /*
  * to run:
@@ -25,7 +25,7 @@ struct Message {
 void read_msg(){
     struct Message msg;
     int msqid = msgget(queue, MSGPERM|IPC_CREAT);
-    int result = msgrcv(msqid, &msg, sizeof(msg), 2, 0);
+    int result = msgrcv(msqid, &msg, sizeof(msg), 2+id, 0);
 
     if (result==-1){
         printf("%s,Oh dear, something went wrong with read()! %s\n",errno, strerror(errno));
@@ -57,6 +57,7 @@ bool is_correct_message(char text[]){
 void main_read(){
     while(1){
         read_msg();
+        sleep(10);
     }
 }
 
@@ -68,13 +69,8 @@ void main_write(){
         scanf("%s",text);
         if(is_correct_message(text)) send_msg(text);
         else printf("Incorrect message\n");
-        break;
     }
 }
-
-
-
-
 
 
 int main(int argc, char *argv[]) {

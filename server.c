@@ -3,7 +3,9 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <errno.h>
-#define queue 812357
+#include <memory.h>
+#include <unistd.h>
+#define queue 812359
 #define MSGPERM 0640    // msg queue permission
 /*
  * State:
@@ -34,17 +36,28 @@ struct Message {
     char text[1024];
 }msg;
 
+void send_msg(int id, char text[]){
+    struct Message msg;
+    msg.type=2;
+    msg.id=id;
+    msg.type=2+id;
+    strcpy(msg.text,text);
+    printf("wysylam:%s %s do %d\n",msg.text, text,msg.id);
+    int msqid = msgget(queue, MSGPERM|IPC_CREAT);
+    int result = msgsnd(msqid, &msg, sizeof(msg), 0);
+    printf("%s,msqid:%d, result:%d\n",msg.text,msqid,result);
+
+}
 void handle_request(struct Message msg){
-    if(!strcmp(msg.text,"connect"))
+    if(!strcmp(msg.text,"connect")){
         players[msg.id].state = 1;
+        send_msg(msg.id,"Waiting for players");
+    }
 }
 
 void read_msg(){
-    printf("la");
     struct Message msg;
-    printf("lala");
     int msqid = msgget(queue, MSGPERM|IPC_CREAT);
-    printf("j");
     int result = msgrcv(msqid, &msg, sizeof(msg), 1, 0);
 
     if (result==-1){
@@ -55,16 +68,8 @@ void read_msg(){
         printf("From od %d: %s \n",msg.id,msg.text);
     }
 }
-void send_msg(int id, char text[]){
-    struct Message msg;
-    msg.type=2;
-    msg.id=id;
-    strcpy(msg.text,text);
-    int msqid = msgget(queue, MSGPERM|IPC_CREAT);
-    int result = msgsnd(msqid, &msg, sizeof(msg), 0);
-    printf("%s,msqid:%d, result:%d\n",msg.text,msqid,result);
 
-}
+
 void initial_values(){
     for(int i=0;i<3;i++){
         players[i].id=i;
@@ -87,17 +92,25 @@ void send_all(char text[]){
     for(int i=0;i<3;i++){
         send_msg(i,text);
     }
+}void waiting()
+{
+    for(int i=0;i<2;i++){
+        if(players[i].state==1)
+            send_msg(i,"Waiting for players");
+    }
+    while(count_connected() < 3){
+        read_msg();
+    }
 }
 int main(int argc, char *argv[])
 {
+    sleep(3);
+    printf("Hi\n");
     initial_values();
-    while(count_connected() < 1){
-        printf("la\n");
-        read_msg();
-        //send_all("Waiting for players");
-    }
+    waiting();
     printf("Ready\n");
-
+    send_all("Ready");
+    sleep(20);
     int msqid = msgget(queue, MSGPERM|IPC_CREAT);
     msgctl(msqid,IPC_RMID,0);
 
