@@ -1,1 +1,4 @@
-CMakeLists.txt not found in /home/kamil/Pulpit/Programowanie/PTW
+/home/kamil/Pulpit/clion-2017.2.3/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/kamil/Pulpit/Programowanie/PTW
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/kamil/Pulpit/Programowanie/PTW/cmake-build-debug
