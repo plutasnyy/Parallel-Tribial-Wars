@@ -26,6 +26,7 @@ struct Player{
 
 struct Message {
     long type;
+    int id;
     char text[1024];
 } msg;
 
