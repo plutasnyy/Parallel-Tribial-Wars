@@ -46,12 +46,6 @@ void send_msg(char text[]){
     printf("%s,msqid:%d, result:%d\n",msg.text,msqid,result);
 
 }
-bool is_correct_message(char text[]){
-    if (!strcmp(text,"connect")) return true;
-    return false;
-}
-
-
 
 
 void main_read(){
@@ -67,8 +61,16 @@ void main_write(){
     char text[1024];
     while(1){
         scanf("%s",text);
-        if(is_correct_message(text)) send_msg(text);
+        if(!strcmp(text,"connect")) {
+            send_msg(text);
+        }
+        else if(!strcmp(text,"build")||!strcmp(text,"attack")||!strcmp(text,"connect")){
+            int,a,b,c,d;
+
+        }
         else printf("Incorrect message\n");
+
+
     }
 }
 
