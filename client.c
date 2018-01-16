@@ -57,7 +57,7 @@ bool is_correct_message(char text[]){
 void main_read(){
     while(1){
         read_msg();
-        sleep(10);
+        sleep(1);
     }
 }
 

@@ -4,7 +4,9 @@
 #include <sys/msg.h>
 #include <errno.h>
 #include <memory.h>
+#include <stdbool.h>
 #include <unistd.h>
+#include <string.h>
 #define queue 812359
 #define MSGPERM 0640    // msg queue permission
 /*
@@ -98,19 +100,53 @@ void send_all(char text[]){
         if(players[i].state==1)
             send_msg(i,"Waiting for players");
     }
-    while(count_connected() < 3){
+    while(count_connected() < 1){
         read_msg();
+    }
+}
+bool stop_condition(){
+    return true;
+}
+void generate_state_message(int i, char array[]){
+    char str[100];
+    strcpy(array,"Resources: ");
+    sprintf(str, "%d", players[i].resources);
+    strcat(array,str);
+    strcat(array,"\nWorkers: ");
+    sprintf(str, "%d", players[i].army.workers);
+    strcat(array,str);
+    strcat(array,"\nRide: ");
+    sprintf(str, "%d", players[i].army.ride);
+    strcat(array,str);
+    strcat(array,"\nLight Inf: ");
+    sprintf(str, "%d", players[i].army.lightInf);
+    strcat(array,str);
+    strcat(array,"\nHeavy Inf: ");
+    sprintf(str, "%d", players[i].army.heavyInf);
+    strcat(array,str);
+
+}
+void send_state(){
+    for(int i=0;i<3;i++){
+        char array[1024];
+        generate_state_message(i,array);
+        printf("%s",array);
+        send_msg(i,array);
     }
 }
 int main(int argc, char *argv[])
 {
-    sleep(3);
+
     printf("Hi\n");
     initial_values();
     waiting();
     printf("Ready\n");
     send_all("Ready");
-    sleep(20);
+    sleep(10);
+    while(stop_condition()){
+        send_state();
+        sleep(3);
+    }
     int msqid = msgget(queue, MSGPERM|IPC_CREAT);
     msgctl(msqid,IPC_RMID,0);
 
