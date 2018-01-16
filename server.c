@@ -18,7 +18,13 @@
  * 1-user->server
  * 2-server->user
  *
+ * ARMY PARAMETEERS
+ * ROW: 0-li 1-ci 2-ride 3-workers
+ * COL: 0-cost 1-at 2-deff 3-prod time
  */
+
+double army_parameters[4][4] = {{100,1,1.2,2},{250,1.5,3,3},{550,3.5,1.2,5},{150,0,0,2}};
+
 struct Army{
     int lightInf;
     int heavyInf;
@@ -30,6 +36,7 @@ struct Player{
     int state;
     int resources;
     struct Army army;
+    int points;
 }players[3];
 
 struct Message {
@@ -81,6 +88,7 @@ void initial_values(){
         players[i].army.lightInf=0;
         players[i].army.ride=0;
         players[i].army.workers=0;
+        players[i].points=0;
     }
 }
 int count_connected(){
