@@ -100,11 +100,12 @@ void read_long_request(int index, int items, char text[],int input_numbers[]){
     }
 }
 
-void handle_request(struct Message msg){
-    if(!strcmp(msg.text,"connect")){
-        players[msg.id].state = 1;
-        send_msg(msg.id,"Waiting for players");
-    }
+void handle_request(struct Message msg) {
+    if (!strcmp(msg.text, "connect"))
+        if (players[msg.id].state == 0) {
+            players[msg.id].state = 1;
+            send_msg(msg.id, "Waiting for players");
+        }
     else{
         char text[1024];
         int i=0;
@@ -153,7 +154,9 @@ void read_msg(){
         handle_request(msg);
         printf("From od %d: %s \n",msg.id,msg.text);
     }
+
 }
+
 
 int count_connected(){
     int sum=0;
@@ -191,13 +194,15 @@ void generate_state_message(int i, char array[]){
 }
 
 void send_state(){
-    for(int i=0;i<3;i++){
-        char array[1024];
-        generate_state_message(i,array);
-       // printf("%s",array);
-        send_msg(i,array);
+    while(1){
+        for(int i=0;i<1;i++){
+            char array[1024];
+            generate_state_message(i,array);
+            send_msg(i,array);
+        }
+
+        sleep(1);
     }
-    exit(1);
 }
 
 bool stop_condition(){
@@ -271,12 +276,13 @@ int main(int argc, char *argv[])
     send_all("Ready");
 
     start_production();
+    if(fork()==0)send_state();
 
     while(stop_condition()){
-        if(fork()==0)send_state();
-        else read_msg();
-        sleep(1);
+        read_msg();
     }
+
+
     printf("wyszedlem\n");
     msqid = msgget(queue, MSGPERM|IPC_CREAT);
     msgctl(msqid,IPC_RMID,0);

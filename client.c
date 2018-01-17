@@ -51,7 +51,7 @@ void send_msg(char text[]){
 void main_read(){
     while(1){
         read_msg();
-        sleep(1);
+        usleep(500);
     }
 }
 void send_request(int number, char text[],int input_values[]){
