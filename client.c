@@ -59,14 +59,42 @@ void main_read(){
 
 void main_write(){
     char text[1024];
+    int input_values[4];
+    int target;
+    char str[100];
     while(1){
         scanf("%s",text);
         if(!strcmp(text,"connect")) {
             send_msg(text);
         }
-        else if(!strcmp(text,"build")||!strcmp(text,"attack")||!strcmp(text,"connect")){
-            int,a,b,c,d;
+        else if(!strcmp(text,"build")){
+            scanf("%d %d %d %d",&input_values[0],&input_values[1],&input_values[2],&input_values[3]);
+            for(int i=0;i<4;i++)
+                if(input_values[i]<0){
+                    printf("Bad values\n");
+                    return;
+                }
 
+            strcat(text," ");
+            for(int i=0;i<4;i++){
+                sprintf(str, "%d",input_values[i]);
+                strcat(text,str);
+                if(i!=3)
+                    strcat(text," ");
+            }
+            send_msg(text);
+
+        }
+        else if((!strcmp(text,"attack"))){
+            scanf("%d",&target);
+            if(target<0 || target > 3 ||target==id){
+                printf("Bad values\n");
+                return;
+            }
+            strcat(text," ");
+            sprintf(str, "%d",target);
+            strcat(text,str);
+            send_msg(text);
         }
         else printf("Incorrect message\n");
 

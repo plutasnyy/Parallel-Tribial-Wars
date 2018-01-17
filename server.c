@@ -70,6 +70,7 @@ void read_msg(){
     int result = msgrcv(msqid, &msg, sizeof(msg), 1, 0);
 
     if (result==-1){
+        perror("Error:");
         printf("%s,Oh dear, something went wrong with read()! %s\n",errno, strerror(errno));
     }
     else{
@@ -145,6 +146,8 @@ void send_state(){
 int main(int argc, char *argv[])
 {
 
+    int msqid = msgget(queue, MSGPERM|IPC_CREAT);
+    msgctl(msqid,IPC_RMID,0);
     printf("Hi\n");
     initial_values();
     waiting();
@@ -152,10 +155,11 @@ int main(int argc, char *argv[])
     send_all("Ready");
     sleep(10);
     while(stop_condition()){
-        send_state();
+        if(fork()==0)read_msg();
+        else send_state();
         sleep(3);
     }
-    int msqid = msgget(queue, MSGPERM|IPC_CREAT);
+    msqid = msgget(queue, MSGPERM|IPC_CREAT);
     msgctl(msqid,IPC_RMID,0);
 
     return 0;

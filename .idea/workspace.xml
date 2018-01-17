@@ -12,8 +12,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1086a225-cfa5-4f26-a757-f41583f87b39" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/client.c" afterPath="$PROJECT_DIR$/client.c" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/server.c" afterPath="$PROJECT_DIR$/server.c" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -30,8 +31,8 @@
           <file leaf-file-name="server.c" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/server.c">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="-675">
-                  <caret line="60" column="36" lean-forward="true" selection-start-line="60" selection-start-column="36" selection-end-line="60" selection-end-column="36" />
+                <state relative-caret-position="506">
+                  <caret line="71" column="20" lean-forward="true" selection-start-line="71" selection-start-column="20" selection-end-line="71" selection-end-column="20" />
                   <folding>
                     <element signature="e#0#18#0" expanded="true" />
                   </folding>
@@ -46,8 +47,8 @@
           <file leaf-file-name="client.c" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/client.c">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="522">
-                  <caret line="60" column="18" lean-forward="false" selection-start-line="60" selection-start-column="18" selection-end-line="60" selection-end-column="18" />
+                <state relative-caret-position="765">
+                  <caret line="87" column="37" lean-forward="false" selection-start-line="87" selection-start-column="37" selection-end-line="87" selection-end-column="37" />
                   <folding>
                     <element signature="e#0#18#0" expanded="true" />
                   </folding>
@@ -71,8 +72,8 @@
     <option name="CHANGED_PATHS">
       <list>
         <option value="$PROJECT_DIR$/CMakeLists.txt" />
-        <option value="$PROJECT_DIR$/server.c" />
         <option value="$PROJECT_DIR$/client.c" />
+        <option value="$PROJECT_DIR$/server.c" />
       </list>
     </option>
   </component>
@@ -254,7 +255,8 @@
       <workItem from="1516043837526" duration="5072000" />
       <workItem from="1516048975419" duration="3593000" />
       <workItem from="1516127605202" duration="194000" />
-      <workItem from="1516128122366" duration="5110000" />
+      <workItem from="1516128122366" duration="5163000" />
+      <workItem from="1516201413196" duration="2477000" />
     </task>
     <task id="LOCAL-00001" summary="Added some things to client">
       <created>1516029332141</created>
@@ -298,11 +300,18 @@
       <option name="project" value="LOCAL" />
       <updated>1516132287015</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="start work with sendig messages about attack and build army">
+      <created>1516133497530</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1516133497530</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="16933000" />
+    <option name="totallyTimeSpent" value="19463000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="260" y="27" width="1920" height="1054" extended-state="6" />
@@ -342,13 +351,34 @@
     <MESSAGE value="created communication beetwen server and players, server know when all players are ready to start" />
     <MESSAGE value="added sending state to player" />
     <MESSAGE value="added army parameters" />
-    <option name="LAST_COMMIT_MESSAGE" value="added army parameters" />
+    <MESSAGE value="start work with sendig messages about attack and build army" />
+    <option name="LAST_COMMIT_MESSAGE" value="start work with sendig messages about attack and build army" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/server.c">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="900">
+          <caret line="60" column="36" lean-forward="true" selection-start-line="60" selection-start-column="36" selection-end-line="60" selection-end-column="36" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/client.c">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/server.c">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1635">
@@ -452,20 +482,20 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/server.c">
+    <entry file="file://$PROJECT_DIR$/client.c">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-675">
-          <caret line="60" column="36" lean-forward="true" selection-start-line="60" selection-start-column="36" selection-end-line="60" selection-end-column="36" />
+        <state relative-caret-position="765">
+          <caret line="87" column="37" lean-forward="false" selection-start-line="87" selection-start-column="37" selection-end-line="87" selection-end-column="37" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/client.c">
+    <entry file="file://$PROJECT_DIR$/server.c">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="522">
-          <caret line="60" column="18" lean-forward="false" selection-start-line="60" selection-start-column="18" selection-end-line="60" selection-end-column="18" />
+        <state relative-caret-position="506">
+          <caret line="71" column="20" lean-forward="true" selection-start-line="71" selection-start-column="20" selection-end-line="71" selection-end-column="20" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
