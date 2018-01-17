@@ -62,6 +62,26 @@ void handle_request(struct Message msg){
         players[msg.id].state = 1;
         send_msg(msg.id,"Waiting for players");
     }
+    else{
+        char text[1024];
+        int i=0;
+        while(msg.text[i]!=' '&&msg.text[i]!=NULL){
+            text[i]=msg.text[i];
+            i++;
+            if(i==1023)break;
+        }
+        i++;
+        if(!strcmp(text,"attack")){
+            int number=0;
+            char n_array[100];
+            int j=0;
+            while()
+        }
+        else if(!strcmp(text,"build")){
+            printf("build");
+        }
+        else printf("bad message");
+    }
 }
 
 void read_msg(){
