@@ -54,8 +54,36 @@ void main_read(){
         sleep(1);
     }
 }
+void send_request(int number, char text[],int input_values[]){
+    char str[100];
+    for(int i=0;i<number;i++){
+        sprintf(str, "%d",input_values[i]);
+        strcat(text,str);
+        strcat(text," ");
+    }
+    send_msg(text);
+}
+void read_3_numbers(int input_values[],char text[]){
+    strcat(text," ");
+    scanf("%d %d %d",&input_values[0],&input_values[1],&input_values[2]);
+    for(int i=0;i<3;i++)
+        if(input_values[i]<0){
+            printf("Bad values\n");
+            return;
+        }
+    send_request(3,text,input_values);
 
-
+}
+void read_2_numbers(int input_values[],char text[]){
+    strcat(text," ");
+    scanf("%d %d %d %d",&input_values[0],&input_values[1],&input_values[2],&input_values[3]);
+    for(int i=0;i<2;i++)
+        if(input_values[i]<0 || input_values[0]>3){
+            printf("Bad values\n");
+            return;
+        }
+    send_request(2,text,input_values);
+}
 
 void main_write(){
     char text[1024];
@@ -68,22 +96,7 @@ void main_write(){
             send_msg(text);
         }
         else if(!strcmp(text,"build")){
-            scanf("%d %d %d %d",&input_values[0],&input_values[1],&input_values[2],&input_values[3]);
-            for(int i=0;i<4;i++)
-                if(input_values[i]<0){
-                    printf("Bad values\n");
-                    return;
-                }
-
-            strcat(text," ");
-            for(int i=0;i<4;i++){
-                sprintf(str, "%d",input_values[i]);
-                strcat(text,str);
-                if(i!=3)
-                    strcat(text," ");
-            }
-            send_msg(text);
-
+            read_2_numbers(input_values,text);
         }
         else if((!strcmp(text,"attack"))){
             scanf("%d",&target);
@@ -94,11 +107,10 @@ void main_write(){
             strcat(text," ");
             sprintf(str, "%d",target);
             strcat(text,str);
-            send_msg(text);
+            read_3_numbers(input_values,text);
+
         }
         else printf("Incorrect message\n");
-
-
     }
 }
 
