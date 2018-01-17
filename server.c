@@ -34,28 +34,18 @@
 
 int id_group_sem;
 struct sembuf sem;
-void sem_up(int id,int num){
+void sem_up(int num){
     sem.sem_num=num;
     sem.sem_op=1;//podnies
     sem.sem_flg=0;
-    semop(id, &sem, 1);
+    semop(id_group_sem, &sem, 1);
 }
-void sem_down(int id,int num){
-    sem.sem_num=0;
+void sem_down(int num){
+    sem.sem_num=num;
     sem.sem_op=0;
     sem.sem_flg=0;
-    semop(id, &sem, 1);
+    semop(id_group_sem, &sem, 1);
 }
-
-
-
-
-
-
-
-
-
-
 
 double army_parameters[4][4] = {{100,1,1.2,2},{250,1.5,3,3},{550,3.5,1.2,5},{150,0,0,2}};
 
@@ -71,15 +61,13 @@ struct Player{
     int resources;
     struct Army army;
     int points;
-}players[3];
-
-
+}*players;
 
 struct Message {
     long type;
     int id;
     char text[1024];
-}msg;
+};
 
 void send_msg(int id, char text[]){
     struct Message msg;
@@ -87,18 +75,18 @@ void send_msg(int id, char text[]){
     msg.id=id;
     msg.type=2+id;
     strcpy(msg.text,text);
-    printf("wysylam:%s %s do %d\n",msg.text, text,msg.id);
     int msqid = msgget(queue, MSGPERM|IPC_CREAT);
     int result = msgsnd(msqid, &msg, sizeof(msg), 0);
-    printf("%s,msqid:%d, result:%d\n",msg.text,msqid,result);
+    printf("Do: %d, msqid: %d, result: %d\n",msg.id,msqid,result);
 
 }
+
 bool can_fight(int a[],int id){
     if(a[0]==id)
         return false;
-    return a[1]>=players[id].army.lightInf && a[2]>=players[id].army.heavyInf && a[3]>=players[id].army.ride;
-
+    return a[1]<=players[id].army.lightInf && a[2]<=players[id].army.heavyInf && a[3]<=players[id].army.ride;
 }
+
 void read_long_request(int index, int items, char text[],int input_numbers[]){
     int j;
     for(int i=0;i<items;i++){
@@ -111,6 +99,7 @@ void read_long_request(int index, int items, char text[],int input_numbers[]){
         input_numbers[i] = atoi(number);
     }
 }
+
 void handle_request(struct Message msg){
     if(!strcmp(msg.text,"connect")){
         players[msg.id].state = 1;
@@ -148,7 +137,6 @@ void handle_request(struct Message msg){
 
         }
         else printf("bad message\n");
-
     }
 }
 
@@ -167,19 +155,6 @@ void read_msg(){
     }
 }
 
-
-void initial_values(){
-    for(int i=0;i<3;i++){
-        players[i].id=i;
-        players[i].state=0;
-        players[i].resources=300;
-        players[i].army.heavyInf=0;
-        players[i].army.lightInf=0;
-        players[i].army.ride=0;
-        players[i].army.workers=i;
-        players[i].points=0;
-    }
-}
 int count_connected(){
     int sum=0;
     for(int i=0;i<3;i++)
@@ -187,23 +162,14 @@ int count_connected(){
             sum++;
     return sum;
 }
+
 void send_all(char text[]){
     for(int i=0;i<3;i++){
         send_msg(i,text);
     }
-}void waiting()
-{
-    for(int i=0;i<2;i++){
-        if(players[i].state==1)
-            send_msg(i,"Waiting for players");
-    }
-    while(count_connected() < 1){
-        read_msg();
-    }
 }
-bool stop_condition(){
-    return true;
-}
+
+
 void generate_state_message(int i, char array[]){
     char str[100];
     strcpy(array,"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nResources: ");
@@ -223,59 +189,98 @@ void generate_state_message(int i, char array[]){
     strcat(array,str);
 
 }
+
 void send_state(){
     for(int i=0;i<3;i++){
         char array[1024];
         generate_state_message(i,array);
        // printf("%s",array);
-       // send_msg(i,array);
+        send_msg(i,array);
     }
+    exit(1);
 }
-void production(int id,int sem_group_id){
+
+bool stop_condition(){
+    return true;
+}
+
+void production(int id){
     while(1){
-        //sem_down(sem_group_id,id);
+        sem_down(id);
         players[id].resources += 50 + players[id].army.workers * 5;
-        //sem_up(sem_group_id,id);
+        sem_up(id);
         sleep(1);
     }
 }
-void start_production(int sem_group_id){
-    printf("Wlaczam:\n");
-    for(int i=0;i<3;i++){
-        printf("%d\n",i);
-        if(fork()==0)
-            production(i,sem_group_id);
-        else continue;
-    }
-    printf("wlaczylem\n");
 
+void start_production(){
+    for(int i=0;i<3;i++){
+        if(fork()==0)
+            production(i);
+    }
 }
+
+void waiting(){
+    for(int i=0;i<3;i++){
+        if(players[i].state==1)
+            send_msg(i,"Waiting for players");
+    }
+    while(count_connected() < 1){
+        read_msg();
+    }
+}
+
+void initial_values(){
+    for(int i=0;i<3;i++){
+        players[i].id=i;
+        players[i].state=0;
+        players[i].resources=300;
+        players[i].army.heavyInf=0;
+        players[i].army.lightInf=0;
+        players[i].army.ride=0;
+        players[i].army.workers=i;
+        players[i].points=0;
+    }
+}
+
 int main(int argc, char *argv[])
 {
+    //SEMAFORY
     int temp = semget(12345,9,IPC_CREAT);
     id_group_sem = temp;
     semctl (id_group_sem, 0, SETALL, 1);
 
+    //PAMIEC WSPOLDZIELONA
+    struct Player ptr[3];
+    int id = shmget(12352,sizeof(ptr[3]),IPC_CREAT|0640);
+    printf("id: %d\n",id);
+    players = (struct Player*)shmat(id,NULL,0);
+    printf("Shmat: %d\n",ptr);
+
+    //SKASOWANIE KOLEJKI DO CZYSZCZENIA
     int msqid = msgget(queue, MSGPERM|IPC_CREAT);
     msgctl(msqid,IPC_RMID,0);
 
     printf("Hi\n");
     initial_values();
+
     waiting();
+
 
     printf("Ready\n");
     send_all("Ready");
 
-    start_production(id_group_sem);
-    printf("TU:\n");
+    start_production();
+
     while(stop_condition()){
-        printf("resources 1: %d\n",players[1].resources);
-        //read_msg();
-        sleep(3);
+        if(fork()==0)send_state();
+        else read_msg();
+        sleep(1);
     }
     printf("wyszedlem\n");
     msqid = msgget(queue, MSGPERM|IPC_CREAT);
     msgctl(msqid,IPC_RMID,0);
-    //shmctl(id,IPC_RMID,SHM_RND);
+    shmctl(id,IPC_RMID,SHM_RND);
+
     return 0;
 }
