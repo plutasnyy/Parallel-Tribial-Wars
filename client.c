@@ -110,6 +110,9 @@ void main_write(){
             read_3_numbers(input_values,text);
 
         }
+        else if((!strcmp(text,"exit"))) {
+            break;
+        }
         else printf("Incorrect message\n");
     }
 }

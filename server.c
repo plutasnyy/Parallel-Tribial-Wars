@@ -10,8 +10,10 @@
 #include <sys/sem.h>
 #include <sys/shm.h>
 #include <string.h>
+
 #define queue 812359
 #define MSGPERM 0640    // msg queue permission
+#define PROD_QUEUE_SIZE 100
 /*
  * State:
  * 0-unconnected
@@ -29,6 +31,7 @@
  * 0,1,2 - resources for 0,1,2
  * 3,4,5 - workers
  * 6,7,8 - army
+ * 9,10,11 - build queue
  */
 
 
@@ -58,9 +61,10 @@ struct Army{
 struct Player{
     int id;
     int state;
-    int resources;
+    double resources;
     struct Army army;
     int points;
+    int build_queue[PROD_QUEUE_SIZE];
 }*players;
 
 struct Message {
@@ -165,10 +169,12 @@ void read_long_request(int index, int items, char text[],int input_numbers[]){
         input_numbers[i] = atoi(number);
     }
 }
+void add_to_production(int pl_id, int army_id, int quantity, double cost){
 
+}
 void handle_request(struct Message msg) {
-    printf("Obsluguje:\n");
-
+    char *attack="attack";
+    char *build="build";
     if (!strcmp(msg.text, "connect")){
         printf("connect\n");
         if (players[msg.id].state == 0) {
@@ -176,9 +182,7 @@ void handle_request(struct Message msg) {
             send_msg(msg.id, "Waiting for players");
         }
     }
-
     else {
-        printf("In else %s:\n", msg.text);
         char text[1024];
         int i = 0;
         while (msg.text[i] != ' ') {
@@ -187,13 +191,10 @@ void handle_request(struct Message msg) {
             if (i == 1023)break;
         }
         i++;
-        printf("Jestem tu %s:\n", text);
-        if (!strcmp(text, "attack")) {
+        if (!strcmp(text, attack)) {
             int input_numbers[4];
             read_long_request(i, 4, msg.text, input_numbers);
-            printf("Rozpoczynam walke:\n");
             if (can_fight(input_numbers, msg.id)) {
-                printf("Moge walczyc\n");
                 if (fork() == 0) {
                     fight(msg.id, input_numbers);
                     exit(1);
@@ -203,19 +204,17 @@ void handle_request(struct Message msg) {
             }
         }
         else {
-            if (!strcmp(text, "build")) {
-                printf("build\n");
-                int input_numbers[2];
-                read_long_request(i, 2, msg.text, input_numbers);
-                printf("build ----\n");
+            text[--i]=NULL;//DONT REMOVE, NEVER dodaje tylko do wiadomosci jakies randomowe K
+            if (!strcmp(text,build)) {
+                int input_numbers[3];
+                read_long_request(i, 3, msg.text, input_numbers);
                 int army_id = input_numbers[1];
                 int quantity = input_numbers[2];
                 double cost = army_parameters[army_id][0] * quantity;
                 if (players[msg.id].resources < cost) {
                     send_msg(msg.id, "You are too poor");
-                    printf("YOu are poor\n");
                 } else
-                    printf("Production... %d\n", msg.id);
+                    add_to_production(msg.id,army_id, quantity, cost);
             } else printf("bad message\n");
         }
     }
@@ -288,6 +287,12 @@ bool stop_condition(){
     return true;
 }
 
+void build_army(int id){
+    while(1){
+
+    }
+}
+
 void production(int id){
     while(1){
         sem_down(id);
@@ -324,6 +329,8 @@ void initial_values(){
         players[i].army.ride=50+2*i;
         players[i].army.workers=i;
         players[i].points=0;
+        for(int j=0;j<PROD_QUEUE_SIZE;j++)
+            players[i].build_queue[j]=-1;
     }
 }
 
@@ -336,7 +343,7 @@ int main(int argc, char *argv[])
 
     //PAMIEC WSPOLDZIELONA
     struct Player ptr[3];
-    int id = shmget(12352,sizeof(ptr[3]),IPC_CREAT|0640);
+    int id = shmget(12353,sizeof(ptr[3]),IPC_CREAT|0640);
     printf("id: %d\n",id);
     players = (struct Player*)shmat(id,NULL,0);
     printf("Shmat: %d\n",ptr);
