@@ -76,7 +76,7 @@ void read_3_numbers(int input_values[],char text[]){
 }
 void read_2_numbers(int input_values[],char text[]){
     strcat(text," ");
-    scanf("%d %d %d %d",&input_values[0],&input_values[1],&input_values[2],&input_values[3]);
+    scanf("%d %d",&input_values[0],&input_values[1]);
     for(int i=0;i<2;i++)
         if(input_values[i]<0 || input_values[0]>3){
             printf("Bad values\n");
@@ -102,7 +102,7 @@ void main_write(){
             scanf("%d",&target);
             if(target<0 || target > 3 ||target==id){
                 printf("Bad values\n");
-                return;
+                continue;
             }
             strcat(text," ");
             sprintf(str, "%d",target);

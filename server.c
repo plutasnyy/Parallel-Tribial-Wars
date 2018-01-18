@@ -81,6 +81,72 @@ void send_msg(int id, char text[]){
 
 }
 
+void fight(int agg_id,int input_number[]){
+    int deff_id=input_number[0];
+    printf("FIGHTY sb\n");
+    struct Player army_in_attack;
+    //[0] - defender ID
+    army_in_attack.army.lightInf = input_number[1];
+    army_in_attack.army.heavyInf = input_number[2];
+    army_in_attack.army.ride = input_number[3];
+
+    printf("HEAVY: %d\n",players[agg_id].army.heavyInf);
+    printf("ARMY HEAVY: %d\n",army_in_attack.army.heavyInf);
+
+    sem_down(6+agg_id);
+    players[agg_id].army.lightInf -= input_number[1];
+    players[agg_id].army.heavyInf -= input_number[2];
+    players[agg_id].army.ride -= input_number[3];
+    sem_up(6+agg_id);
+
+    printf("HEAVY: %d\n",players[agg_id].army.heavyInf);
+    sleep(5);
+
+
+    sem_down(6+deff_id);
+    sem_down(6+agg_id);
+
+    double attack_force = army_in_attack.army.lightInf*army_parameters[0][1]+army_in_attack.army.heavyInf*army_parameters[1][1]+army_in_attack.army.ride*army_parameters[2][1];
+    double defend_force = players[deff_id].army.lightInf*army_parameters[0][2]+players[deff_id].army.heavyInf*army_parameters[1][2]+players[deff_id].army.ride*army_parameters[2][2];
+
+    double at_wsp=1;
+    if(attack_force!=0)at_wsp=defend_force/attack_force;//wspolczynnik strat
+
+    double def_wsp=1;
+    if(defend_force!=0)def_wsp=attack_force/defend_force;
+
+    if(attack_force-defend_force>0){
+        //SUCCES
+        printf("%d pokonuje %d\n",agg_id,deff_id);
+
+        players[deff_id].army.ride=0;
+        players[deff_id].army.lightInf=0;
+        players[deff_id].army.heavyInf=0;
+
+        players[agg_id].points+=1;
+        players[agg_id].army.lightInf += army_in_attack.army.lightInf*(1-at_wsp);
+        players[agg_id].army.heavyInf += army_in_attack.army.heavyInf*(1-at_wsp);
+        players[agg_id].army.ride += army_in_attack.army.ride*(1-at_wsp);
+
+    }
+    else{
+        //DEFEND
+        //W PDFie wzory byly chyba bledne i napisalem wlasna interpretacje,
+
+        printf("%d pokonuje %d\n",deff_id,agg_id);
+
+        players[deff_id].army.lightInf  *= (1-def_wsp);
+        players[deff_id].army.heavyInf  *= (1-def_wsp);
+        players[deff_id].army.ride  *= (1-def_wsp);
+
+    }
+
+    sem_up(6+deff_id);
+    sem_up(6+agg_id);
+
+    printf("HEAVY: %d\n",players[agg_id].army.heavyInf);
+}
+
 bool can_fight(int a[],int id){
     if(a[0]==id)
         return false;
@@ -101,43 +167,57 @@ void read_long_request(int index, int items, char text[],int input_numbers[]){
 }
 
 void handle_request(struct Message msg) {
-    if (!strcmp(msg.text, "connect"))
+    printf("Obsluguje:\n");
+
+    if (!strcmp(msg.text, "connect")){
+        printf("connect\n");
         if (players[msg.id].state == 0) {
             players[msg.id].state = 1;
             send_msg(msg.id, "Waiting for players");
         }
-    else{
+    }
+
+    else {
+        printf("In else %s:\n", msg.text);
         char text[1024];
-        int i=0;
-        while(msg.text[i]!=' '){
-            text[i]=msg.text[i];
+        int i = 0;
+        while (msg.text[i] != ' ') {
+            text[i] = msg.text[i];
             i++;
-            if(i==1023)break;
+            if (i == 1023)break;
         }
         i++;
-        if(!strcmp(text,"attack")){
-            int input_numbers[3];
-            read_long_request(i,3,msg.text,input_numbers);
-            if(can_fight(input_numbers,msg.id)){
-                printf("Walka!\n");
-            }
-            else{
+        printf("Jestem tu %s:\n", text);
+        if (!strcmp(text, "attack")) {
+            int input_numbers[4];
+            read_long_request(i, 4, msg.text, input_numbers);
+            printf("Rozpoczynam walke:\n");
+            if (can_fight(input_numbers, msg.id)) {
+                printf("Moge walczyc\n");
+                if (fork() == 0) {
+                    fight(msg.id, input_numbers);
+                    exit(1);
+                }
+            } else {
                 printf("Walka niemozliwa\n");
             }
         }
-        else if(!strcmp(text,"build")){
-            int input_numbers[2];
-            read_long_request(i,2,msg.text,input_numbers);
-            int army_id=input_numbers[1];
-            int quantity=input_numbers[2];
-            double cost=army_parameters[army_id][0]*quantity;
-            if(players[msg.id].resources<cost)
-                send_msg(msg.id,"You are too poor");
-            else
-                printf("Production... %d\n",msg.id);
-
+        else {
+            if (!strcmp(text, "build")) {
+                printf("build\n");
+                int input_numbers[2];
+                read_long_request(i, 2, msg.text, input_numbers);
+                printf("build ----\n");
+                int army_id = input_numbers[1];
+                int quantity = input_numbers[2];
+                double cost = army_parameters[army_id][0] * quantity;
+                if (players[msg.id].resources < cost) {
+                    send_msg(msg.id, "You are too poor");
+                    printf("YOu are poor\n");
+                } else
+                    printf("Production... %d\n", msg.id);
+            } else printf("bad message\n");
         }
-        else printf("bad message\n");
     }
 }
 
@@ -156,7 +236,6 @@ void read_msg(){
     }
 
 }
-
 
 int count_connected(){
     int sum=0;
@@ -240,9 +319,9 @@ void initial_values(){
         players[i].id=i;
         players[i].state=0;
         players[i].resources=300;
-        players[i].army.heavyInf=0;
-        players[i].army.lightInf=0;
-        players[i].army.ride=0;
+        players[i].army.heavyInf=100/(i+1);
+        players[i].army.lightInf=(i+1)*20;
+        players[i].army.ride=50+2*i;
         players[i].army.workers=i;
         players[i].points=0;
     }
