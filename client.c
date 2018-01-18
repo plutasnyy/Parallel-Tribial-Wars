@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #define MSGPERM 0640    // msg queue permission
-#define queue 812359
+#define queue 812360
 long id;
 /*
  * to run:
@@ -51,7 +51,7 @@ void send_msg(char text[]){
 void main_read(){
     while(1){
         read_msg();
-        usleep(500);
+        usleep(1000);
     }
 }
 void send_request(int number, char text[],int input_values[]){

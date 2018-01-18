@@ -11,7 +11,7 @@
 #include <sys/shm.h>
 #include <string.h>
 
-#define queue 812359
+#define queue 812360
 #define MSGPERM 0640    // msg queue permission
 #define PROD_QUEUE_SIZE 100
 /*
@@ -193,6 +193,7 @@ void add_to_production(int pl_id, int army_id, int quantity, double cost){
     sem_up(pl_id);
     sem_up(9+pl_id);
 }
+
 void handle_request(struct Message msg) {
     char *attack="attack";
     char *build="build";
@@ -273,7 +274,6 @@ void send_all(char text[]){
     }
 }
 
-
 void generate_state_message(int i, char array[]){
     char str[100];
     strcpy(array,"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nResources: ");
@@ -311,13 +311,52 @@ bool stop_condition(){
 }
 
 void build_army(int id){
-    while(1){
+    while(stop_condition()){
+        sem_down(9+id);
+        if(players[id].build_queue[0]==-1){
+            sem_up(9+id);
+            continue;
+        }
+        else{
+            int army_id = players[id].build_queue[0];
+            int quantity = players[id].build_queue[1];
 
+            for(int i=0;i<PROD_QUEUE_SIZE-3;i++){
+                if(players[id].build_queue[i]==-1)break;
+                else players[id].build_queue[i]=players[id].build_queue[i+2];
+            }
+            sem_up(9+id);
+
+            for(int i=0;i<quantity;i++){
+                sleep(((unsigned int) army_parameters[army_id][3]));
+                if(army_id==3)sem_down(3+id);
+                else sem_down(6+id);
+
+                if(army_id==0) players[id].army.lightInf+=1;
+                else if (army_id==1) players[id].army.heavyInf+=1;
+                else if (army_id==2) players[id].army.ride+=1;
+                else if (army_id==3) players[id].army.workers+=1;
+                else printf("BAD ID???\n");
+
+                if(army_id==3)sem_up(3+id);
+                else sem_up(6+id);
+            }
+        }
+        usleep(33);
+    }
+}
+
+void start_build_army(){
+    for(int i=0;i<3;i++){
+        if(fork()==0){
+            build_army(i);
+            exit(1);
+        }
     }
 }
 
 void production(int id){
-    while(1){
+    while(stop_condition()){
         sem_down(id);
         players[id].resources += 50 + players[id].army.workers * 5;
         sem_up(id);
@@ -327,8 +366,10 @@ void production(int id){
 
 void start_production(){
     for(int i=0;i<3;i++){
-        if(fork()==0)
+        if(fork()==0){
             production(i);
+           // exit(1);
+        }
     }
 }
 
@@ -385,9 +426,12 @@ int main(int argc, char *argv[])
     send_all("Ready");
 
     start_production();
+    //start_build_army();
+
     if(fork()==0)send_state();
 
     while(stop_condition()){
+        printf("ZASOBY 0:%lf\n",players[0].resources);
         read_msg();
     }
 
