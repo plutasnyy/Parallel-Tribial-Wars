@@ -159,18 +159,39 @@ bool can_fight(int a[],int id){
 
 void read_long_request(int index, int items, char text[],int input_numbers[]){
     int j;
+    char number[100];
     for(int i=0;i<items;i++){
-        char number[100];
+        for(int k=0;k<100;k++)number[k]=NULL;
         j=0;
         while(text[index]!=' '){
             number[j++]=text[index++];
         }
         index++;
+        printf("Do atoi: %s\n",number);
         input_numbers[i] = atoi(number);
     }
 }
 void add_to_production(int pl_id, int army_id, int quantity, double cost){
+    int index = -1;
 
+    sem_down(9+pl_id);
+    for(int i=0;i<PROD_QUEUE_SIZE-2;i++){
+        if(players[pl_id].build_queue[i]==-1){
+            index=i;
+            break;
+        }
+    }
+    if(index==-1){
+        sem_up(9+pl_id);
+        return;
+    }
+    players[pl_id].build_queue[index]=army_id;
+    players[pl_id].build_queue[index+1]=quantity;
+
+    sem_down(pl_id);
+    players[pl_id].resources-=cost;
+    sem_up(pl_id);
+    sem_up(9+pl_id);
 }
 void handle_request(struct Message msg) {
     char *attack="attack";
@@ -184,6 +205,7 @@ void handle_request(struct Message msg) {
     }
     else {
         char text[1024];
+        for(int i=0;i<1024;i++)text[i]=NULL;
         int i = 0;
         while (msg.text[i] != ' ') {
             text[i] = msg.text[i];
@@ -193,7 +215,8 @@ void handle_request(struct Message msg) {
         i++;
         if (!strcmp(text, attack)) {
             int input_numbers[4];
-            read_long_request(i, 4, msg.text, input_numbers);
+            read_long_request(i++, 4, msg.text, input_numbers);
+            printf("%d %d %d %d\n",input_numbers[0],input_numbers[1],input_numbers[2],input_numbers[3]);
             if (can_fight(input_numbers, msg.id)) {
                 if (fork() == 0) {
                     fight(msg.id, input_numbers);
@@ -204,18 +227,18 @@ void handle_request(struct Message msg) {
             }
         }
         else {
-            text[--i]=NULL;//DONT REMOVE, NEVER dodaje tylko do wiadomosci jakies randomowe K
             if (!strcmp(text,build)) {
-                int input_numbers[3];
-                read_long_request(i, 3, msg.text, input_numbers);
+                int input_numbers[2];
+                read_long_request(i, 2, msg.text, input_numbers);
+                printf("%d %d\n",input_numbers[0],input_numbers[1]);
                 int army_id = input_numbers[1];
                 int quantity = input_numbers[2];
                 double cost = army_parameters[army_id][0] * quantity;
                 if (players[msg.id].resources < cost) {
                     send_msg(msg.id, "You are too poor");
                 } else
-                    add_to_production(msg.id,army_id, quantity, cost);
-            } else printf("bad message\n");
+                    add_to_production(msg.id,army_id,quantity,cost);
+            } else printf("Bad message\n");
         }
     }
 }
@@ -343,7 +366,7 @@ int main(int argc, char *argv[])
 
     //PAMIEC WSPOLDZIELONA
     struct Player ptr[3];
-    int id = shmget(12353,sizeof(ptr[3]),IPC_CREAT|0640);
+    int id = shmget(12354,sizeof(ptr[3]),IPC_CREAT|0640);
     printf("id: %d\n",id);
     players = (struct Player*)shmat(id,NULL,0);
     printf("Shmat: %d\n",ptr);
