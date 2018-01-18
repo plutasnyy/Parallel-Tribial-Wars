@@ -81,7 +81,7 @@ void send_msg(int id, char text[]){
     strcpy(msg.text,text);
     int msqid = msgget(queue, MSGPERM|IPC_CREAT);
     int result = msgsnd(msqid, &msg, sizeof(msg), 0);
-    printf("Do: %d, msqid: %d, result: %d\n",msg.id,msqid,result);
+   // printf("Do: %d, msqid: %d, result: %d\n",msg.id,msqid,result);
 
 }
 
@@ -174,13 +174,16 @@ void read_long_request(int index, int items, char text[],int input_numbers[]){
 void add_to_production(int pl_id, int army_id, int quantity, double cost){
     int index = -1;
 
+    printf("Dodaje\n");
     sem_down(9+pl_id);
+
     for(int i=0;i<PROD_QUEUE_SIZE-2;i++){
         if(players[pl_id].build_queue[i]==-1){
             index=i;
             break;
         }
     }
+    printf("Index: %d Player id:%d\n",index,pl_id);
     if(index==-1){
         sem_up(9+pl_id);
         return;
@@ -191,7 +194,13 @@ void add_to_production(int pl_id, int army_id, int quantity, double cost){
     sem_down(pl_id);
     players[pl_id].resources-=cost;
     sem_up(pl_id);
+
     sem_up(9+pl_id);
+
+
+    for(int i=0;i<10;i++)
+        printf("%d ",players[0].build_queue[i]);
+    printf("\n");
 }
 
 void handle_request(struct Message msg) {
@@ -231,14 +240,16 @@ void handle_request(struct Message msg) {
             if (!strcmp(text,build)) {
                 int input_numbers[2];
                 read_long_request(i, 2, msg.text, input_numbers);
-                printf("%d %d\n",input_numbers[0],input_numbers[1]);
-                int army_id = input_numbers[1];
-                int quantity = input_numbers[2];
+                int army_id = input_numbers[0];
+                int quantity = input_numbers[1];
                 double cost = army_parameters[army_id][0] * quantity;
+                printf("%d %d %lf\n",army_id,quantity,cost);
                 if (players[msg.id].resources < cost) {
                     send_msg(msg.id, "You are too poor");
-                } else
+                } else{
+                    printf("Uruchamiam produkcje:\n");
                     add_to_production(msg.id,army_id,quantity,cost);
+                }
             } else printf("Bad message\n");
         }
     }
@@ -277,7 +288,7 @@ void send_all(char text[]){
 void generate_state_message(int i, char array[]){
     char str[100];
     strcpy(array,"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nResources: ");
-    sprintf(str, "%d", players[i].resources);
+    sprintf(str, "%lf", players[i].resources);
     strcat(array,str);
     strcat(array,"\nLight Inf: ");
     sprintf(str, "%d", players[i].army.lightInf);
@@ -294,8 +305,12 @@ void generate_state_message(int i, char array[]){
 
 }
 
+bool stop_condition(){
+    return true;
+}
+
 void send_state(){
-    while(1){
+    while(stop_condition()){
         for(int i=0;i<1;i++){
             char array[1024];
             generate_state_message(i,array);
@@ -304,10 +319,6 @@ void send_state(){
 
         sleep(1);
     }
-}
-
-bool stop_condition(){
-    return true;
 }
 
 void build_army(int id){
@@ -320,18 +331,25 @@ void build_army(int id){
         else{
             int army_id = players[id].build_queue[0];
             int quantity = players[id].build_queue[1];
-
+            printf("Produkuje: %d %d\n",army_id,quantity);
+            printf("Przestawiam\n");
+            for(int i=0;i<10;i++)
+                printf("%d ",players[0].build_queue[i]);
+            printf("\n");
             for(int i=0;i<PROD_QUEUE_SIZE-3;i++){
                 if(players[id].build_queue[i]==-1)break;
                 else players[id].build_queue[i]=players[id].build_queue[i+2];
             }
+            for(int i=0;i<10;i++)
+                printf("%d ",players[0].build_queue[i]);
+            printf("\n");
             sem_up(9+id);
 
             for(int i=0;i<quantity;i++){
                 sleep(((unsigned int) army_parameters[army_id][3]));
                 if(army_id==3)sem_down(3+id);
                 else sem_down(6+id);
-
+                printf("Podnosze: %d\n",army_id);
                 if(army_id==0) players[id].army.lightInf+=1;
                 else if (army_id==1) players[id].army.heavyInf+=1;
                 else if (army_id==2) players[id].army.ride+=1;
@@ -358,7 +376,9 @@ void start_build_army(){
 void production(int id){
     while(stop_condition()){
         sem_down(id);
+        sem_down(3+id);
         players[id].resources += 50 + players[id].army.workers * 5;
+        sem_up(3+id);
         sem_up(id);
         sleep(1);
     }
@@ -426,12 +446,14 @@ int main(int argc, char *argv[])
     send_all("Ready");
 
     start_production();
-    //start_build_army();
+    start_build_army();
 
     if(fork()==0)send_state();
 
     while(stop_condition()){
-        printf("ZASOBY 0:%lf\n",players[0].resources);
+        for(int i=0;i<10;i++)
+            printf("%d ",players[0].build_queue[i]);
+        printf("\n");
         read_msg();
     }
 
