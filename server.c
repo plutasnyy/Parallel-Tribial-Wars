@@ -14,6 +14,7 @@
 #define MSGPERM 0640    // msg queue permission
 #define PROD_QUEUE_SIZE 100
 
+int end_capture = 1;
 /*
  * State:
  * 0-unconnected
@@ -283,7 +284,7 @@ void generate_state_message(int i, char array[]){
 }
 
 bool stop_condition(){
-    return true;
+    return players[0].points<5 && players[1].points<5 && players[2].points<5 && end_capture;
 }
 
 void send_state(){
