@@ -9,11 +9,11 @@
 #include <unistd.h>
 #include <sys/sem.h>
 #include <sys/shm.h>
-#include <string.h>
 
 #define queue 812360
 #define MSGPERM 0640    // msg queue permission
 #define PROD_QUEUE_SIZE 100
+
 /*
  * State:
  * 0-unconnected
@@ -49,7 +49,7 @@ void sem_up(int num){
 }
 void sem_down(int num){
     sem.sem_num=num;
-    sem.sem_op=0;
+    sem.sem_op=-1;
     sem.sem_flg=0;
     semop(id_group_sem, &sem, 1);
 }
@@ -162,11 +162,10 @@ bool can_fight(int a[],int id){
     return a[1]<=players[id].army.lightInf && a[2]<=players[id].army.heavyInf && a[3]<=players[id].army.ride;
 }
 
-
 void add_to_production(int pl_id, int army_id, int quantity, double cost){
     int index = -1;
 
-    printf("Dodaje\n");
+    printf("ADD\n");
     sem_down(9+pl_id);
 
     for(int i=0;i<PROD_QUEUE_SIZE-2;i++){
@@ -196,8 +195,6 @@ void add_to_production(int pl_id, int army_id, int quantity, double cost){
 }
 
 void handle_request(struct Message msg) {
-    char *attack="attack";
-    char *build="build";
     if (msg.type == 1){
         printf("connect\n");
         if (players[msg.id].state == 0) {
@@ -215,7 +212,8 @@ void handle_request(struct Message msg) {
                 exit(1);
             }
         } else {
-            printf("Walka niemozliwa\n");
+            send_msg(msg.id, "Cant fight\n");
+            printf("Cant fight\n");
         }
     }
     else if (msg.type == 3) {
@@ -242,13 +240,12 @@ void read_msg(){
 
     if (result==-1){
         perror("Error:");
-        printf("%s,Oh dear, something went wrong with read()! %s\n",errno, strerror(errno));
+        printf("%s,Something went wrong %s\n",errno, strerror(errno));
     }
     else{
         handle_request(msg);
         printf("From od %d \n",msg.id);
     }
-
 }
 
 int count_connected(){
@@ -311,8 +308,8 @@ void build_army(int id){
         else{
             int army_id = players[id].build_queue[0];
             int quantity = players[id].build_queue[1];
-            printf("Produkuje: %d %d\n",army_id,quantity);
-            printf("Przestawiam\n");
+            printf("PRODUCTION: %d %d\n",army_id,quantity);
+            printf("SWAP\n");
             for(int i=0;i<10;i++)
                 printf("%d ",players[0].build_queue[i]);
             printf("\n");
@@ -329,7 +326,7 @@ void build_army(int id){
                 sleep(((unsigned int) army_parameters[army_id][3]));
                 if(army_id==3)sem_down(3+id);
                 else sem_down(6+id);
-                printf("Podnosze: %d\n",army_id);
+                printf("UP: %d\n",army_id);
                 if(army_id==0) players[id].army.lightInf+=1;
                 else if (army_id==1) players[id].army.heavyInf+=1;
                 else if (army_id==2) players[id].army.ride+=1;
@@ -421,7 +418,6 @@ int main(int argc, char *argv[])
 
     waiting();
 
-
     printf("Ready\n");
     send_all("Ready");
 
@@ -437,8 +433,7 @@ int main(int argc, char *argv[])
         read_msg();
     }
 
-
-    printf("wyszedlem\n");
+    printf("Exit\n");
     msqid = msgget(queue, MSGPERM|IPC_CREAT);
     msgctl(msqid,IPC_RMID,0);
     shmctl(id,IPC_RMID,SHM_RND);

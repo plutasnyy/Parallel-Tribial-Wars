@@ -10,12 +10,14 @@
 #define MSGPERM 0640    // msg queue permission
 #define queue 812360
 long id;
+
 /*
  * to run:
  * ./client id rw
  * id 0-2
  * rw = 0 READ 1 WRITE
  */
+
 struct Message {
     long type;
     int id;
@@ -94,7 +96,6 @@ void main_write(){
                 continue;
             }
             read_3_numbers(input_values);
-
         }
         else if((!strcmp(command,"exit"))) {
             break;
