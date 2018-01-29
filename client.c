@@ -20,6 +20,7 @@ struct Message {
     long type;
     int id;
     char text[1024];
+    int array[4];
 };
 
 void read_msg(){
@@ -36,17 +37,16 @@ void read_msg(){
         }
     }
 }
-void send_msg(char text[]){
+void send_msg(int type, int array[]){
     struct Message msg;
-    msg.type=1;
+    msg.type = type;
     msg.id = (int)id;
-    strcpy(msg.text,text);
+    memcpy(msg.array, array, sizeof(int) * 4);
     int msqid = msgget(queue, MSGPERM|IPC_CREAT);
-    int result = msgsnd(msqid, &msg, sizeof(msg), 0);
+    int result = msgsnd(msqid, &msg, sizeof(msg)-sizeof(long), 0);
     printf("%s,msqid:%d, result:%d\n",msg.text,msqid,result);
 
 }
-
 
 void main_read(){
     while(1){
@@ -54,69 +54,54 @@ void main_read(){
         usleep(1000);
     }
 }
-void send_request(int number, char text[],int input_values[]){
-    char str[100];
-    for(int i=0;i<number;i++){
-        sprintf(str, "%d",input_values[i]);
-        strcat(text,str);
-        strcat(text," ");
-    }
-    send_msg(text);
-}
-void read_3_numbers(int input_values[],char text[]){
-    strcat(text," ");
-    scanf("%d %d %d",&input_values[0],&input_values[1],&input_values[2]);
-    for(int i=0;i<3;i++)
+
+void read_3_numbers(int input_values[]){
+    scanf("%d %d %d",&input_values[1],&input_values[2],&input_values[3]);
+    for(int i=1;i<4;i++)
         if(input_values[i]<0){
             printf("Bad values\n");
             return;
         }
-    send_request(3,text,input_values);
-
+    send_msg(2,input_values);
 }
-void read_2_numbers(int input_values[],char text[]){
-    strcat(text," ");
+
+void read_2_numbers(int input_values[]){
     scanf("%d %d",&input_values[0],&input_values[1]);
     for(int i=0;i<2;i++)
         if(input_values[i]<0 || input_values[0]>3){
             printf("Bad values\n");
             return;
         }
-    send_request(2,text,input_values);
+    send_msg(3,input_values);
 }
 
 void main_write(){
-    char text[1024];
+    char command[10];
     int input_values[4];
     int target;
-    char str[100];
     while(1){
-        scanf("%s",text);
-        if(!strcmp(text,"connect")) {
-            send_msg(text);
+        scanf("%s",command);
+        if(!strcmp(command,"connect")) {
+            send_msg(1, input_values) ;
         }
-        else if(!strcmp(text,"build")){
-            read_2_numbers(input_values,text);
+        else if(!strcmp(command,"build")){
+            read_2_numbers(input_values);
         }
-        else if((!strcmp(text,"attack"))){
+        else if((!strcmp(command,"attack"))){
             scanf("%d",&target);
             if(target<0 || target > 3 ||target==id){
                 printf("Bad values\n");
                 continue;
             }
-            strcat(text," ");
-            sprintf(str, "%d",target);
-            strcat(text,str);
-            read_3_numbers(input_values,text);
+            read_3_numbers(input_values);
 
         }
-        else if((!strcmp(text,"exit"))) {
+        else if((!strcmp(command,"exit"))) {
             break;
         }
         else printf("Incorrect message\n");
     }
 }
-
 
 int main(int argc, char *argv[]) {
     id = strtol(argv[1], NULL, 10);

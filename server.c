@@ -20,8 +20,12 @@
  * 1-connected
  *
  * Message type:
- * 1-user->server
+ * 1-user->server:
+     * 1.connect
+     * 2.attack
+     * 3.build
  * 2-server->user
+     * 2+id
  *
  * ARMY PARAMETEERS
  * ROW: 0-li 1-ci 2-ride 3-workers
@@ -71,6 +75,7 @@ struct Message {
     long type;
     int id;
     char text[1024];
+    int array[4];
 };
 
 void send_msg(int id, char text[]){
@@ -157,20 +162,7 @@ bool can_fight(int a[],int id){
     return a[1]<=players[id].army.lightInf && a[2]<=players[id].army.heavyInf && a[3]<=players[id].army.ride;
 }
 
-void read_long_request(int index, int items, char text[],int input_numbers[]){
-    int j;
-    char number[100];
-    for(int i=0;i<items;i++){
-        for(int k=0;k<100;k++)number[k]=NULL;
-        j=0;
-        while(text[index]!=' '){
-            number[j++]=text[index++];
-        }
-        index++;
-        printf("Do atoi: %s\n",number);
-        input_numbers[i] = atoi(number);
-    }
-}
+
 void add_to_production(int pl_id, int army_id, int quantity, double cost){
     int index = -1;
 
@@ -206,59 +198,47 @@ void add_to_production(int pl_id, int army_id, int quantity, double cost){
 void handle_request(struct Message msg) {
     char *attack="attack";
     char *build="build";
-    if (!strcmp(msg.text, "connect")){
+    if (msg.type == 1){
         printf("connect\n");
         if (players[msg.id].state == 0) {
             players[msg.id].state = 1;
             send_msg(msg.id, "Waiting for players");
         }
     }
-    else {
-        char text[1024];
-        for(int i=0;i<1024;i++)text[i]=NULL;
-        int i = 0;
-        while (msg.text[i] != ' ') {
-            text[i] = msg.text[i];
-            i++;
-            if (i == 1023)break;
-        }
-        i++;
-        if (!strcmp(text, attack)) {
-            int input_numbers[4];
-            read_long_request(i++, 4, msg.text, input_numbers);
-            printf("%d %d %d %d\n",input_numbers[0],input_numbers[1],input_numbers[2],input_numbers[3]);
-            if (can_fight(input_numbers, msg.id)) {
-                if (fork() == 0) {
-                    fight(msg.id, input_numbers);
-                    exit(1);
-                }
-            } else {
-                printf("Walka niemozliwa\n");
+    else if (msg.type == 2) {
+        int input_numbers[4];
+        memcpy(input_numbers, msg.array, sizeof(int) * 4);
+        printf("%d %d %d %d\n",input_numbers[0],input_numbers[1],input_numbers[2],input_numbers[3]);
+        if (can_fight(input_numbers, msg.id)) {
+            if (fork() == 0) {
+                fight(msg.id, input_numbers);
+                exit(1);
             }
-        }
-        else {
-            if (!strcmp(text,build)) {
-                int input_numbers[2];
-                read_long_request(i, 2, msg.text, input_numbers);
-                int army_id = input_numbers[0];
-                int quantity = input_numbers[1];
-                double cost = army_parameters[army_id][0] * quantity;
-                printf("%d %d %lf\n",army_id,quantity,cost);
-                if (players[msg.id].resources < cost) {
-                    send_msg(msg.id, "You are too poor");
-                } else{
-                    printf("Uruchamiam produkcje:\n");
-                    add_to_production(msg.id,army_id,quantity,cost);
-                }
-            } else printf("Bad message\n");
+        } else {
+            printf("Walka niemozliwa\n");
         }
     }
+    else if (msg.type == 3) {
+        int input_numbers[4];
+        memcpy(input_numbers, msg.array, sizeof(int) * 4);
+        int army_id = input_numbers[0];
+        int quantity = input_numbers[1];
+        double cost = army_parameters[army_id][0] * quantity;
+        printf("%d %d %lf\n",army_id,quantity,cost);
+        if (players[msg.id].resources < cost) {
+            send_msg(msg.id, "You are too poor");
+        } else{
+            printf("Uruchamiam produkcje:\n");
+            add_to_production(msg.id,army_id,quantity,cost);
+        }
+    }
+    else printf("Bad message\n");
 }
 
 void read_msg(){
     struct Message msg;
     int msqid = msgget(queue, MSGPERM|IPC_CREAT);
-    int result = msgrcv(msqid, &msg, sizeof(msg), 1, 0);
+    int result = msgrcv(msqid, &msg, sizeof(msg)-sizeof(long), 0, 0);
 
     if (result==-1){
         perror("Error:");
@@ -266,7 +246,7 @@ void read_msg(){
     }
     else{
         handle_request(msg);
-        printf("From od %d: %s \n",msg.id,msg.text);
+        printf("From od %d \n",msg.id);
     }
 
 }
