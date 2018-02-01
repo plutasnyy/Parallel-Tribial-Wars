@@ -9,8 +9,9 @@
 #include <unistd.h>
 #include <sys/sem.h>
 #include <sys/shm.h>
+#include <signal.h>
 
-#define queue 812360
+#define queue 812361
 #define MSGPERM 0640    // msg queue permission
 #define PROD_QUEUE_SIZE 100
 
@@ -25,6 +26,7 @@ int end_capture = 1;
      * 1.connect
      * 2.attack
      * 3.build
+     * 4.exit
  * 2-server->user
      * 2+id
  *
@@ -77,31 +79,34 @@ struct Message {
     int id;
     char text[1024];
     int array[4];
+    int exit;
 };
+bool stop_condition(){
+    for(int i=0;i<3;i++)
+        if(players[i].state == 0) return false;
+    return players[0].points<5 && players[1].points<5 && players[2].points<5;
+}
 
 void send_msg(int id, char text[]){
     struct Message msg;
     msg.type=2;
     msg.id=id;
     msg.type=2+id;
+    msg.exit = end_capture;
     strcpy(msg.text,text);
-    int msqid = msgget(queue, MSGPERM|IPC_CREAT);
-    int result = msgsnd(msqid, &msg, sizeof(msg), 0);
-   // printf("Do: %d, msqid: %d, result: %d\n",msg.id,msqid,result);
+    int msqid = msgget(queue+5, MSGPERM|IPC_CREAT);
+    int result = msgsnd(msqid, &msg, sizeof(msg)-sizeof(long), 0);
 
 }
 
 void fight(int agg_id,int input_number[]){
     int deff_id=input_number[0];
-    printf("FIGHTY sb\n");
+    printf("FIGHT\n");
     struct Player army_in_attack;
     //[0] - defender ID
     army_in_attack.army.lightInf = input_number[1];
     army_in_attack.army.heavyInf = input_number[2];
     army_in_attack.army.ride = input_number[3];
-
-    printf("HEAVY: %d\n",players[agg_id].army.heavyInf);
-    printf("ARMY HEAVY: %d\n",army_in_attack.army.heavyInf);
 
     sem_down(6+agg_id);
     players[agg_id].army.lightInf -= input_number[1];
@@ -109,7 +114,6 @@ void fight(int agg_id,int input_number[]){
     players[agg_id].army.ride -= input_number[3];
     sem_up(6+agg_id);
 
-    printf("HEAVY: %d\n",players[agg_id].army.heavyInf);
     sleep(5);
 
 
@@ -154,7 +158,6 @@ void fight(int agg_id,int input_number[]){
     sem_up(6+deff_id);
     sem_up(6+agg_id);
 
-    printf("HEAVY: %d\n",players[agg_id].army.heavyInf);
 }
 
 bool can_fight(int a[],int id){
@@ -166,7 +169,6 @@ bool can_fight(int a[],int id){
 void add_to_production(int pl_id, int army_id, int quantity, double cost){
     int index = -1;
 
-    printf("ADD\n");
     sem_down(9+pl_id);
 
     for(int i=0;i<PROD_QUEUE_SIZE-2;i++){
@@ -175,7 +177,6 @@ void add_to_production(int pl_id, int army_id, int quantity, double cost){
             break;
         }
     }
-    printf("Index: %d Player id:%d\n",index,pl_id);
     if(index==-1){
         sem_up(9+pl_id);
         return;
@@ -188,11 +189,6 @@ void add_to_production(int pl_id, int army_id, int quantity, double cost){
     sem_up(pl_id);
 
     sem_up(9+pl_id);
-
-
-    for(int i=0;i<10;i++)
-        printf("%d ",players[0].build_queue[i]);
-    printf("\n");
 }
 
 void handle_request(struct Message msg) {
@@ -214,7 +210,6 @@ void handle_request(struct Message msg) {
             }
         } else {
             send_msg(msg.id, "Cant fight\n");
-            printf("Cant fight\n");
         }
     }
     else if (msg.type == 3) {
@@ -227,11 +222,10 @@ void handle_request(struct Message msg) {
         if (players[msg.id].resources < cost) {
             send_msg(msg.id, "You are too poor");
         } else{
-            printf("Uruchamiam produkcje:\n");
             add_to_production(msg.id,army_id,quantity,cost);
         }
     }
-    else printf("Bad message\n");
+    else msg.type == 4 ? (players[msg.id].state = 0) : printf("Bad message\n");
 }
 
 void read_msg(){
@@ -240,8 +234,7 @@ void read_msg(){
     int result = msgrcv(msqid, &msg, sizeof(msg)-sizeof(long), 0, 0);
 
     if (result==-1){
-        perror("Error:");
-        printf("%s,Something went wrong %s\n",errno, strerror(errno));
+        perror("Error read msg:");
     }
     else{
         handle_request(msg);
@@ -283,18 +276,15 @@ void generate_state_message(int i, char array[]){
 
 }
 
-bool stop_condition(){
-    return players[0].points<5 && players[1].points<5 && players[2].points<5 && end_capture;
-}
+
 
 void send_state(){
     while(stop_condition()){
-        for(int i=0;i<1;i++){
+        for(int i=0;i<3;i++){
             char array[1024];
             generate_state_message(i,array);
             send_msg(i,array);
         }
-
         sleep(1);
     }
 }
@@ -309,25 +299,17 @@ void build_army(int id){
         else{
             int army_id = players[id].build_queue[0];
             int quantity = players[id].build_queue[1];
-            printf("PRODUCTION: %d %d\n",army_id,quantity);
-            printf("SWAP\n");
-            for(int i=0;i<10;i++)
-                printf("%d ",players[0].build_queue[i]);
-            printf("\n");
             for(int i=0;i<PROD_QUEUE_SIZE-3;i++){
                 if(players[id].build_queue[i]==-1)break;
                 else players[id].build_queue[i]=players[id].build_queue[i+2];
             }
-            for(int i=0;i<10;i++)
-                printf("%d ",players[0].build_queue[i]);
-            printf("\n");
+
             sem_up(9+id);
 
             for(int i=0;i<quantity;i++){
                 sleep(((unsigned int) army_parameters[army_id][3]));
                 if(army_id==3)sem_down(3+id);
                 else sem_down(6+id);
-                printf("UP: %d\n",army_id);
                 if(army_id==0) players[id].army.lightInf+=1;
                 else if (army_id==1) players[id].army.heavyInf+=1;
                 else if (army_id==2) players[id].army.ride+=1;
@@ -366,7 +348,7 @@ void start_production(){
     for(int i=0;i<3;i++){
         if(fork()==0){
             production(i);
-           // exit(1);
+            exit(1);
         }
     }
 }
@@ -376,7 +358,7 @@ void waiting(){
         if(players[i].state==1)
             send_msg(i,"Waiting for players");
     }
-    while(count_connected() < 1){
+    while(count_connected() < 3){
         read_msg();
     }
 }
@@ -385,19 +367,51 @@ void initial_values(){
     for(int i=0;i<3;i++){
         players[i].id=i;
         players[i].state=0;
-        players[i].resources=300;
-        players[i].army.heavyInf=100/(i+1);
-        players[i].army.lightInf=(i+1)*20;
-        players[i].army.ride=50+2*i;
-        players[i].army.workers=i;
+        players[i].resources=0;
+        players[i].army.heavyInf=0;
+        players[i].army.lightInf=0;
+        players[i].army.ride=0;
+        players[i].army.workers=0;
         players[i].points=0;
         for(int j=0;j<PROD_QUEUE_SIZE;j++)
             players[i].build_queue[j]=-1;
     }
 }
 
+void exit_function(){
+    //SKASOWANIE KOLEJKI DO CZYSZCZENIA
+    int msqid = msgget(queue, MSGPERM|IPC_CREAT);
+    msgctl(msqid,IPC_RMID,0);
+
+    msqid = msgget(queue+5, MSGPERM|IPC_CREAT);
+    msgctl(msqid,IPC_RMID,0);
+
+    players[0].state = 0; //to kill other process
+    end_capture = 0;
+    for(int i=0;i<3;i++)
+        send_msg(i,"End\n");
+
+    int id = shmget(12354,sizeof(struct Player[3]),IPC_CREAT|0640);
+    shmctl(id,IPC_RMID,SHM_RND);
+}
+
+void send_win_message(){
+    for(int i=0;i<3;i++){
+        if(players[i].points>=5){
+            send_msg(i,"You won :)\n");
+            break;
+        }
+    }
+}
+
+void sigint(){
+    exit_function();
+    exit(1);
+}
 int main(int argc, char *argv[])
 {
+    signal(SIGINT,sigint);
+
     //SEMAFORY
     int temp = semget(12345,9,IPC_CREAT);
     id_group_sem = temp;
@@ -409,10 +423,6 @@ int main(int argc, char *argv[])
     printf("id: %d\n",id);
     players = (struct Player*)shmat(id,NULL,0);
     printf("Shmat: %d\n",ptr);
-
-    //SKASOWANIE KOLEJKI DO CZYSZCZENIA
-    int msqid = msgget(queue, MSGPERM|IPC_CREAT);
-    msgctl(msqid,IPC_RMID,0);
 
     printf("Hi\n");
     initial_values();
@@ -428,16 +438,11 @@ int main(int argc, char *argv[])
     if(fork()==0)send_state();
 
     while(stop_condition()){
-        for(int i=0;i<10;i++)
-            printf("%d ",players[0].build_queue[i]);
-        printf("\n");
         read_msg();
     }
 
-    printf("Exit\n");
-    msqid = msgget(queue, MSGPERM|IPC_CREAT);
-    msgctl(msqid,IPC_RMID,0);
-    shmctl(id,IPC_RMID,SHM_RND);
+    send_win_message();
+    exit_function();
 
     return 0;
 }
